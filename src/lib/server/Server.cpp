@@ -1,7 +1,7 @@
 /*
  * Deskflow -- mouse and keyboard sharing utility
  * SPDX-FileCopyrightText: (C) 2025 Deskflow Developers.
- * SPDX-FileCopyrightText: (C) 2012 Synergy App Ltd
+ * SPDX-FileCopyrightText: (C) 2012, 2026 Synergy App Ltd
  * SPDX-FileCopyrightText: (C) 2002 Chris Schoeneman
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
@@ -17,7 +17,6 @@
 #include "deskflow/OptionTypes.h"
 #include "deskflow/PacketStreamFilter.h"
 #include "deskflow/ProtocolTypes.h"
-#include "deskflow/StreamChunker.h"
 #include "deskflow/ipc/CoreIpc.h"
 #include "net/TCPSocket.h"
 #include "server/ClientListener.h"
@@ -25,8 +24,8 @@
 #include "server/ClientProxyUnknown.h"
 #include "server/PrimaryClient.h"
 
-#ifdef _WIN32
 #include <algorithm>
+#ifdef _WIN32
 #include <array>
 #endif
 #include <cmath>
@@ -168,6 +167,10 @@ Server::~Server()
   m_events->removeHandler(PrimaryComputerFakeInputEnd, m_inputFilter);
   m_events->removeHandler(Timer, this);
   stopSwitch();
+  if (m_clipboardSyncTimer != nullptr) {
+    m_events->removeHandler(Timer, m_clipboardSyncTimer);
+    m_events->deleteTimer(m_clipboardSyncTimer);
+  }
 
   try {
     // force immediate disconnection of secondary clients
@@ -453,6 +456,11 @@ void Server::switchComputer(BaseClientProxy *dst, int32_t x, int32_t y, bool for
   // since that's a waste of time we skip that and just warp the
   // mouse.
   if (m_active != dst) {
+    // remember where we came from so a burst of fabricated motion right after
+    // the warp can't throw us straight back
+    m_lastSwitchFrom = m_active;
+    m_sinceLastSwitch.reset();
+
     // leave active computer
     if (!m_active->leave()) {
       // cannot leave computer
@@ -460,15 +468,8 @@ void Server::switchComputer(BaseClientProxy *dst, int32_t x, int32_t y, bool for
       return;
     }
 
-    // update the primary client's clipboards if we're leaving the
-    // primary computer.
-    if (m_active == m_primaryClient && m_enableClipboard) {
-      for (ClipboardID id = 0; id < kClipboardEnd; ++id) {
-        const ClipboardInfo &clipboard = m_clipboards[id];
-        if (clipboard.m_clipboardOwner == getName(m_primaryClient)) {
-          onClipboardChanged(m_primaryClient, id, clipboard.m_clipboardSeqNum);
-        }
-      }
+    if (m_active == m_primaryClient) {
+      m_primaryClipboardStale = true;
     }
 
 #if defined(__APPLE__)
@@ -493,14 +494,7 @@ void Server::switchComputer(BaseClientProxy *dst, int32_t x, int32_t y, bool for
     m_active->enter(x, y, m_seqNum, m_primaryClient->getToggleMask(), forScreensaver);
 
     if (m_enableClipboard) {
-      // send the clipboard data to new active computer
-      for (ClipboardID id = 0; id < kClipboardEnd; ++id) {
-        // Hackity hackity hack
-        if (m_clipboards[id].m_clipboard.marshall().size() > (m_maximumClipboardSize * 1024)) {
-          continue;
-        }
-        m_active->setClipboard(id, &m_clipboards[id].m_clipboard);
-      }
+      syncClipboardsWhenMouseIdle();
     }
 
     auto *info = new Server::SwitchToComputerInfo(m_active->getName());
@@ -793,6 +787,19 @@ bool Server::isSwitchOkay(
     // want to try to switch later.
     LOG_VERBOSE("no neighbor %s", Config::dirName(dir));
     stopSwitch();
+    return false;
+  }
+
+  // Don't bounce straight back to the computer we just left.  After the cursor
+  // is warped on leave, platforms (notably Windows with a low level hook) can
+  // report a burst of fabricated motion that looks exactly like a deliberate
+  // cross back over the edge.  The result is two or more switches within a few
+  // milliseconds, which the user sees as a stutter and which also re-sends the
+  // clipboard each time.  Real user input takes far longer than the guard.
+  if (newComputer == m_lastSwitchFrom && m_sinceLastSwitch.getTime() < kSwitchBounceGuardSec) {
+    LOG_VERBOSE(
+        "ignoring bounce back to \"%s\" %.3fs after leaving it", getName(newComputer).c_str(), m_sinceLastSwitch.getTime()
+    );
     return false;
   }
 
@@ -1209,7 +1216,8 @@ void Server::handleClipboardGrabbed(const Event &event, BaseClientProxy *grabber
 
   if (grabber == m_primaryClient && m_active != m_primaryClient) {
     LOG_DEBUG("clipboard grabbed while active computer was changed, resending clipboard data");
-    onClipboardChanged(m_primaryClient, info->m_id, clipboard.m_clipboardSeqNum);
+    m_primaryClipboardStale = true;
+    syncClipboardsWhenMouseIdle();
   }
 }
 
@@ -1221,6 +1229,7 @@ void Server::handleClipboardChanged(const Event &event, BaseClientProxy *client)
   }
   const auto *info = static_cast<const IComputer::ClipboardInfo *>(event.getData());
   onClipboardChanged(client, info->m_id, info->m_sequenceNumber);
+  syncClipboardsWhenMouseIdle();
 }
 
 void Server::handleKeyDownEvent(const Event &event)
@@ -1455,7 +1464,13 @@ void Server::onClipboardChanged(const BaseClientProxy *sender, ClipboardID id, u
 
   std::string data = clipboard.m_clipboard.marshall();
   if (data.size() > m_maximumClipboardSize * 1024) {
-    LOG_WARN("not sending clipboard data, exceeds limit: %i KB", m_maximumClipboardSize);
+    const auto size = IClipboard::formatSize(data.size());
+    const auto limit = IClipboard::formatSize(m_maximumClipboardSize * 1024);
+    LOG_WARN("not sending clipboard data, size: %s, limit: %s", size.constData(), limit.constData());
+    ipcSendToClient(
+        QStringLiteral("clipboardOverLimit"),
+        QStringLiteral("%1,%2").arg(data.size()).arg(m_maximumClipboardSize * 1024)
+    );
     return;
   }
 
@@ -1475,8 +1490,69 @@ void Server::onClipboardChanged(const BaseClientProxy *sender, ClipboardID id, u
     client->setClipboardDirty(id, client != sender);
   }
 
-  // send the new clipboard to the active computer
-  m_active->setClipboard(id, &clipboard.m_clipboard);
+  // a wayland server can only offer a clipboard while the pointer is away, so update it now rather than on return
+  m_primaryClient->setClipboard(id, &clipboard.m_clipboard);
+}
+
+void Server::syncClipboardsWhenMouseIdle()
+{
+  if (m_clipboardSyncTimer != nullptr) {
+    return;
+  }
+
+  // copying and sending a large clipboard stalls input, so only start once the mouse rests
+  if (const auto waitMs = msUntilMouseIdle(); waitMs > 0) {
+    m_clipboardSyncTimer = m_events->newOneShotTimer(static_cast<double>(waitMs) / 1000.0, nullptr);
+    m_events->addHandler(EventTypes::Timer, m_clipboardSyncTimer, [this](const auto &) {
+      m_events->removeHandler(EventTypes::Timer, m_clipboardSyncTimer);
+      m_events->deleteTimer(m_clipboardSyncTimer);
+      m_clipboardSyncTimer = nullptr;
+      syncClipboardsWhenMouseIdle();
+    });
+  } else {
+    LOG_DEBUG("mouse at rest, syncing clipboards with screen: %s", getName(m_active).c_str());
+    syncClipboards();
+  }
+}
+
+void Server::syncClipboardsBeforeInput()
+{
+  // a key or click may be a paste, so the clipboard has to reach the screen before it does
+  if (m_clipboardSyncTimer != nullptr) {
+    m_events->removeHandler(EventTypes::Timer, m_clipboardSyncTimer);
+    m_events->deleteTimer(m_clipboardSyncTimer);
+    m_clipboardSyncTimer = nullptr;
+    LOG_DEBUG("input before the mouse rested, syncing clipboards with screen: %s", getName(m_active).c_str());
+    syncClipboards();
+  }
+  m_active->finishClipboardTransfers();
+}
+
+void Server::syncClipboards()
+{
+
+  if (m_primaryClipboardStale) {
+    m_primaryClipboardStale = false;
+    for (ClipboardID id = 0; id < kClipboardEnd; ++id) {
+      const ClipboardInfo &clipboard = m_clipboards[id];
+      if (clipboard.m_clipboardOwner == getName(m_primaryClient)) {
+        onClipboardChanged(m_primaryClient, id, clipboard.m_clipboardSeqNum);
+      }
+    }
+  }
+
+  for (ClipboardID id = 0; id < kClipboardEnd; ++id) {
+    if (m_clipboards[id].m_clipboard.marshall().size() > (m_maximumClipboardSize * 1024)) {
+      continue;
+    }
+    m_active->setClipboard(id, &m_clipboards[id].m_clipboard);
+  }
+}
+
+qint64 Server::msUntilMouseIdle() const
+{
+  const auto sinceMouseMs = m_sinceMouseActivity.isValid() ? m_sinceMouseActivity.elapsed() : kMouseIdleMs;
+  return std::max(kMouseIdleMs - sinceMouseMs, qint64{0});
 }
 
 void Server::onScreensaver(bool activated)
@@ -1536,6 +1612,7 @@ void Server::onKeyDown(KeyID id, KeyModifierMask mask, KeyButton button, const s
 {
   LOG_VERBOSE("onKeyDown id=%d mask=0x%04x button=0x%04x lang=%s", id, mask, button, lang.c_str());
   assert(m_active != nullptr);
+  syncClipboardsBeforeInput();
 
   // relay
   if (!m_keyboardBroadcasting && IKeyState::KeyInfo::isDefault(computers)) {
@@ -1593,7 +1670,9 @@ void Server::onKeyRepeat(KeyID id, KeyModifierMask mask, int32_t count, KeyButto
 void Server::onMouseDown(ButtonID id)
 {
   LOG_VERBOSE("onMouseDown id=%d", id);
+  m_sinceMouseActivity.start();
   assert(m_active != nullptr);
+  syncClipboardsBeforeInput();
 
   // relay
   m_active->mouseDown(id);
@@ -1602,6 +1681,7 @@ void Server::onMouseDown(ButtonID id)
 void Server::onMouseUp(ButtonID id)
 {
   LOG_VERBOSE("onMouseUp id=%d", id);
+  m_sinceMouseActivity.start();
   assert(m_active != nullptr);
 
   // relay
@@ -1611,6 +1691,7 @@ void Server::onMouseUp(ButtonID id)
 bool Server::onMouseMovePrimary(int32_t x, int32_t y)
 {
   LOG_VERBOSE("onMouseMovePrimary %d,%d", x, y);
+  m_sinceMouseActivity.start();
 
   // mouse move on primary (server's) computer
   if (m_active != m_primaryClient) {
@@ -1708,6 +1789,10 @@ bool Server::onMouseMovePrimary(int32_t x, int32_t y)
 void Server::onMouseMoveSecondary(int32_t dx, int32_t dy)
 {
   LOG_VERBOSE("mouse move on secondary: %+d,%+d", dx, dy);
+  m_sinceMouseActivity.start();
+  if (dx == 0 && dy == 0) {
+    return;
+  }
 
   // TODO: move this to client side and use a qt setting or cli arg instead of env var.
   const static auto adjustEnv = "DESKFLOW_MOUSE_ADJUSTMENT";
@@ -1880,6 +1965,7 @@ void Server::onMouseMoveSecondary(int32_t dx, int32_t dy)
 void Server::onMouseWheel(int32_t xDelta, int32_t yDelta)
 {
   LOG_VERBOSE("onMouseWheel %+d,%+d", xDelta, yDelta);
+  m_sinceMouseActivity.start();
   assert(m_active != nullptr);
 
   // relay
