@@ -837,7 +837,8 @@ bool Server::isSwitchOkay(
   // clipboard each time.  Real user input takes far longer than the guard.
   if (newComputer == m_lastSwitchFrom && m_sinceLastSwitch.getTime() < kSwitchBounceGuardSec) {
     LOG_VERBOSE(
-        "ignoring bounce back to \"%s\" %.3fs after leaving it", getName(newComputer).c_str(), m_sinceLastSwitch.getTime()
+        "ignoring bounce back to \"%s\" %.3fs after leaving it", getName(newComputer).c_str(),
+        m_sinceLastSwitch.getTime()
     );
     return false;
   }
