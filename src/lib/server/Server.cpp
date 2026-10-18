@@ -456,6 +456,11 @@ void Server::switchComputer(BaseClientProxy *dst, int32_t x, int32_t y, bool for
   // since that's a waste of time we skip that and just warp the
   // mouse.
   if (m_active != dst) {
+    // remember where we came from so a burst of fabricated motion right after
+    // the warp can't throw us straight back
+    m_lastSwitchFrom = m_active;
+    m_sinceLastSwitch.reset();
+
     // leave active computer
     if (!m_active->leave()) {
       // cannot leave computer
@@ -782,6 +787,19 @@ bool Server::isSwitchOkay(
     // want to try to switch later.
     LOG_VERBOSE("no neighbor %s", Config::dirName(dir));
     stopSwitch();
+    return false;
+  }
+
+  // Don't bounce straight back to the computer we just left.  After the cursor
+  // is warped on leave, platforms (notably Windows with a low level hook) can
+  // report a burst of fabricated motion that looks exactly like a deliberate
+  // cross back over the edge.  The result is two or more switches within a few
+  // milliseconds, which the user sees as a stutter and which also re-sends the
+  // clipboard each time.  Real user input takes far longer than the guard.
+  if (newComputer == m_lastSwitchFrom && m_sinceLastSwitch.getTime() < kSwitchBounceGuardSec) {
+    LOG_VERBOSE(
+        "ignoring bounce back to \"%s\" %.3fs after leaving it", getName(newComputer).c_str(), m_sinceLastSwitch.getTime()
+    );
     return false;
   }
 

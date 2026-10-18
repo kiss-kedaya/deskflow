@@ -461,6 +461,15 @@ private:
   bool m_switchTwoTapEngaged = false;
   bool m_switchTwoTapArmed = false;
 
+  // guard against bouncing straight back to the computer we just left. a
+  // platform can report a burst of fabricated motion right after the cursor is
+  // warped, which used to throw the cursor back and forth across the edge
+  // (several switches within a few milliseconds look like a stutter).
+  BaseClientProxy *m_lastSwitchFrom = nullptr;
+  Stopwatch m_sinceLastSwitch;
+  static constexpr double kSwitchBounceGuardSec = 0.12;
+  bool m_movedInwardSinceSwitch = false;
+
   // relative mouse move option
   bool m_relativeMoves = false;
 
