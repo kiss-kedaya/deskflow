@@ -49,3 +49,6 @@ CMakeFiles/*
 # Ai helperfilers
 **/[cC]laude.[mM][dD]
 **/CLAUDE.[mM][dD]
+
+# local build artifacts and rollback binaries
+.artifacts/

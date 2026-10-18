@@ -1265,22 +1265,32 @@ bool MSWindowsComputer::onMouseMove(int32_t mx, int32_t my)
     // motion on primary computer
     sendEvent(EventTypes::PrimaryComputerMotionOnPrimary, MotionInfo::alloc(m_xCursor, m_yCursor));
   } else {
-    // the motion is on the secondary computer, so we warp mouse back to
-    // center on the server computer. if we don't do this, then the mouse
-    // will always try to return to the original entry point on the
+    // the motion is on the secondary computer, so keep the physical cursor
+    // near the center on the server computer. if we don't do this, then the
+    // mouse will always try to return to the original entry point on the
     // secondary computer.
-    LOG_VERBOSE("centering cursor on motion: %+d,%+d", m_xCenter, m_yCenter);
-    warpCursorNoFlush(m_xCenter, m_yCenter);
+    //
+    // Warping on every sample is expensive (a SetCursorPos plus a message
+    // queue drain), and a high report rate mouse makes it dominate the time
+    // we need to forward input. only recentre once the cursor has drifted
+    // far enough. the delta above is always relative to the last known
+    // position, so delaying the warp does not lose motion.
+    const int32_t driftX = mx > m_xCenter ? mx - m_xCenter : m_xCenter - mx;
+    const int32_t driftY = my > m_yCenter ? my - m_yCenter : m_yCenter - my;
+    if (driftX > kRecenterThreshold || driftY > kRecenterThreshold) {
+      LOG_VERBOSE("centering cursor on motion: %+d,%d", m_xCenter, m_yCenter);
+      warpCursorNoFlush(m_xCenter, m_yCenter);
+    }
 
-    // examine the motion.  if it's about the distance
-    // from the center of the computer to an edge then
-    // it's probably a bogus motion that we want to
-    // ignore (see warpCursorNoFlush() for a further
-    // description).
-    static int32_t bogusZoneSize = 10;
-    if (-x + bogusZoneSize > m_xCenter - m_x || x + bogusZoneSize > m_x + m_w - m_xCenter ||
-        -y + bogusZoneSize > m_yCenter - m_y || y + bogusZoneSize > m_y + m_h - m_yCenter) {
-
+    // A warp that lands while the pointer is still moving can be reported
+    // back to us as one huge delta. a real sample is a few pixels even on a
+    // very fast flick, so reject per event instead of comparing against the
+    // screen geometry (which is wrong when the primary monitor isn't centred
+    // in the virtual desktop).
+    static constexpr int32_t bogusDelta = 256;
+    const int32_t absX = x < 0 ? -x : x;
+    const int32_t absY = y < 0 ? -y : y;
+    if (absX > bogusDelta || absY > bogusDelta) {
       LOG_DEBUG("dropped bogus delta motion: %+d,%+d", x, y);
     } else {
       // send motion

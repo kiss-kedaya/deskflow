@@ -226,6 +226,11 @@ private:
   // change the active m_computer
   void switchComputer(BaseClientProxy *, int32_t x, int32_t y, bool forScreenSaver);
 
+  // send a mouse position to the active computer, coalescing bursts so a
+  // high report rate mouse doesn't put one tiny packet per sample on the wire
+  void sendMouseMove(int32_t x, int32_t y);
+  void flushMouseMove();
+
   // jump to computer
   void jumpToComputer(BaseClientProxy *);
 
@@ -468,7 +473,16 @@ private:
   BaseClientProxy *m_lastSwitchFrom = nullptr;
   Stopwatch m_sinceLastSwitch;
   static constexpr double kSwitchBounceGuardSec = 0.12;
-  bool m_movedInwardSinceSwitch = false;
+
+  // mouse motion coalescing. the latest position always wins, so a burst of
+  // high rate samples becomes one packet instead of dozens; the timer only
+  // exists while there is a pending position, and input that follows a move
+  // flushes it so a click never lands behind the cursor.
+  bool m_mouseMovePending = false;
+  int32_t m_pendingMouseX = 0;
+  int32_t m_pendingMouseY = 0;
+  EventQueueTimer *m_mouseMoveTimer = nullptr;
+  static constexpr double kMouseMoveCoalesceSec = 0.004;
 
   // relative mouse move option
   bool m_relativeMoves = false;

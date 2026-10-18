@@ -167,6 +167,11 @@ Server::~Server()
   m_events->removeHandler(PrimaryComputerFakeInputEnd, m_inputFilter);
   m_events->removeHandler(Timer, this);
   stopSwitch();
+  if (m_mouseMoveTimer != nullptr) {
+    m_events->removeHandler(Timer, m_mouseMoveTimer);
+    m_events->deleteTimer(m_mouseMoveTimer);
+    m_mouseMoveTimer = nullptr;
+  }
   if (m_clipboardSyncTimer != nullptr) {
     m_events->removeHandler(Timer, m_clipboardSyncTimer);
     m_events->deleteTimer(m_clipboardSyncTimer);
@@ -402,6 +407,9 @@ void Server::switchComputer(BaseClientProxy *dst, int32_t x, int32_t y, bool for
 {
   assert(dst != nullptr);
 
+  // a queued position from the old computer is stale as soon as we cut over
+  flushMouseMove();
+
   int32_t dx;
   int32_t dy;
   int32_t dw;
@@ -502,6 +510,37 @@ void Server::switchComputer(BaseClientProxy *dst, int32_t x, int32_t y, bool for
   } else {
     m_active->mouseMove(x, y);
   }
+}
+
+void Server::sendMouseMove(int32_t x, int32_t y)
+{
+  // assume callers run on the server's event thread, which owns m_active.
+  // the position is absolute and the newest one always wins.
+  m_pendingMouseX = x;
+  m_pendingMouseY = y;
+  m_mouseMovePending = true;
+
+  if (m_mouseMoveTimer == nullptr) {
+    m_mouseMoveTimer = m_events->newOneShotTimer(kMouseMoveCoalesceSec, nullptr);
+    m_events->addHandler(EventTypes::Timer, m_mouseMoveTimer, [this](const auto &) {
+      m_events->removeHandler(EventTypes::Timer, m_mouseMoveTimer);
+      m_events->deleteTimer(m_mouseMoveTimer);
+      m_mouseMoveTimer = nullptr;
+      flushMouseMove();
+    });
+  }
+}
+
+void Server::flushMouseMove()
+{
+  if (!m_mouseMovePending || m_active == nullptr) {
+    return;
+  }
+  m_mouseMovePending = false;
+
+  // coalescing a high report rate mouse means the client can miss the
+  // intermediate samples; the final position is what matters for a pointer.
+  m_active->mouseMove(m_pendingMouseX, m_pendingMouseY);
 }
 
 void Server::jumpToComputer(BaseClientProxy *newComputer)
@@ -1612,6 +1651,7 @@ void Server::onKeyDown(KeyID id, KeyModifierMask mask, KeyButton button, const s
 {
   LOG_VERBOSE("onKeyDown id=%d mask=0x%04x button=0x%04x lang=%s", id, mask, button, lang.c_str());
   assert(m_active != nullptr);
+  flushMouseMove();
   syncClipboardsBeforeInput();
 
   // relay
@@ -1672,6 +1712,9 @@ void Server::onMouseDown(ButtonID id)
   LOG_VERBOSE("onMouseDown id=%d", id);
   m_sinceMouseActivity.start();
   assert(m_active != nullptr);
+  // the click must land where the user sees the cursor, so don't leave a
+  // coalesced position sitting in the queue
+  flushMouseMove();
   syncClipboardsBeforeInput();
 
   // relay
@@ -1957,7 +2000,7 @@ void Server::onMouseMoveSecondary(int32_t dx, int32_t dy)
     // warp cursor if it moved.
     if (m_x != xOld || m_y != yOld) {
       LOG_VERBOSE("move on %s to %d,%d", getName(m_active).c_str(), m_x, m_y);
-      m_active->mouseMove(m_x, m_y);
+      sendMouseMove(m_x, m_y);
     }
   }
 }
@@ -1967,6 +2010,7 @@ void Server::onMouseWheel(int32_t xDelta, int32_t yDelta)
   LOG_VERBOSE("onMouseWheel %+d,%+d", xDelta, yDelta);
   m_sinceMouseActivity.start();
   assert(m_active != nullptr);
+  flushMouseMove();
 
   // relay
   m_active->mouseWheel(xDelta, yDelta);
