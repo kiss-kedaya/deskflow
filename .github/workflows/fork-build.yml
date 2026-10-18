@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: (C) 2026 Deskflow Developers
+# SPDX-License-Identifier: MIT
+#
+# Manual Windows build for this fork. The upstream workflow only runs on the
+# upstream repository (or a fork with Actions enabled for push events), so this
+# one can be dispatched by hand from the Actions tab or with `gh workflow run`.
+
+name: Fork build
+
+on:
+  workflow_dispatch:
+    inputs:
+      qt-version:
+        description: "Qt version to build against"
+        required: false
+        default: "6.12"
+  push:
+    branches:
+      - master
+      - "perf/**"
+
+env:
+  GIT_SHA: ${{ github.sha }}
+  CMAKE_CONFIGURE: "cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON"
+
+jobs:
+  windows-x64:
+    runs-on: windows-2022
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup VC++ environment
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: amd64
+
+      - name: Install dependencies
+        id: get-deps
+        uses: ./.github/actions/install-dependencies
+        with:
+          qt-version: ${{ inputs.qt-version || '6.12' }}
+          vcpkg-triplet: x64-windows-release
+
+      - name: Configure
+        run: ${{env.CMAKE_CONFIGURE}} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }}
+
+      - name: Build
+        run: cmake --build build --config Release -j8 --target package
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: deskflow-windows-x64
+          path: build/deskflow[-_]*.*
