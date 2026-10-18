@@ -482,6 +482,7 @@ private:
   int32_t m_pendingMouseX = 0;
   int32_t m_pendingMouseY = 0;
   EventQueueTimer *m_mouseMoveTimer = nullptr;
+  Stopwatch m_sinceMouseMoveSent;
   static constexpr double kMouseMoveCoalesceSec = 0.004;
 
   // relative mouse move option

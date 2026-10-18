@@ -520,6 +520,14 @@ void Server::sendMouseMove(int32_t x, int32_t y)
   m_pendingMouseY = y;
   m_mouseMovePending = true;
 
+  // At ordinary report rates (125-250 Hz) the gap between samples is already
+  // longer than the coalescing window, so send straight away and add no
+  // latency at all. Only a high report rate mouse needs the timer.
+  if (m_sinceMouseMoveSent.getTime() >= kMouseMoveCoalesceSec) {
+    flushMouseMove();
+    return;
+  }
+
   if (m_mouseMoveTimer == nullptr) {
     m_mouseMoveTimer = m_events->newOneShotTimer(kMouseMoveCoalesceSec, nullptr);
     m_events->addHandler(EventTypes::Timer, m_mouseMoveTimer, [this](const auto &) {
@@ -537,6 +545,7 @@ void Server::flushMouseMove()
     return;
   }
   m_mouseMovePending = false;
+  m_sinceMouseMoveSent.reset();
 
   // coalescing a high report rate mouse means the client can miss the
   // intermediate samples; the final position is what matters for a pointer.
