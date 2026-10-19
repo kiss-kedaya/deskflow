@@ -78,13 +78,28 @@ jobs:
       - name: Build
         run: |
           cmake --build build --config Release -j8
-          cmake --build build --config Release -j8 --target package
+          package_ok=false
+          for i in 1 2 3 4 5; do
+            if cmake --build build --config Release -j8 --target package; then
+              package_ok=true
+              break
+            fi
+            hdiutil detach /Volumes/Deskflow -force || true
+            sleep 2
+          done
+          if [ "$package_ok" != true ]; then
+            echo "dmg packaging failed, archiving the app bundle instead" >&2
+            ditto -c -k --sequesterRsrc --keepParent build/deskflow-*.app deskflow-app.zip
+          fi
 
       - name: Upload
         uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: deskflow-macos-arm64
-          path: build/deskflow[-_]*.dmg
+          path: |
+            build/deskflow[-_]*.dmg
+            deskflow-app.zip
 
   macos-x64:
     runs-on: macos-15-intel
@@ -108,10 +123,27 @@ jobs:
       - name: Build
         run: |
           cmake --build build --config Release -j8
-          cmake --build build --config Release -j8 --target package
+          # hdiutil occasionally fails to detach a temporary image; retry like upstream does
+          package_ok=false
+          for i in 1 2 3 4 5; do
+            if cmake --build build --config Release -j8 --target package; then
+              package_ok=true
+              break
+            fi
+            hdiutil detach /Volumes/Deskflow -force || true
+            sleep 2
+          done
+          if [ "$package_ok" != true ]; then
+            echo "dmg packaging failed, archiving the app bundle instead" >&2
+            ditto -c -k --sequesterRsrc --keepParent build/deskflow-*.app deskflow-app.zip
+          fi
 
       - name: Upload
         uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: deskflow-macos-x64
-          path: build/deskflow[-_]*.dmg
+          path: |
+            build/deskflow[-_]*.dmg
+            deskflow-app.zip
+
