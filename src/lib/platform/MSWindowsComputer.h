@@ -283,13 +283,6 @@ private:
   int32_t m_xCursor = 0;
   int32_t m_yCursor = 0;
 
-  // While the pointer is on a client we park the physical cursor near the
-  // centre of this computer and turn the reported position into a delta.
-  // Warping on every single sample costs a SetCursorPos plus a message queue
-  // drain each time, which a high report rate mouse makes very expensive, so
-  // only recentre once the cursor has drifted this far from the park point.
-  static constexpr int32_t kRecenterThreshold = 64;
-
   // last clipboard
   uint32_t m_sequenceNumber = 0;
 
