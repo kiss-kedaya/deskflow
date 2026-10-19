@@ -99,11 +99,14 @@ jobs:
       - name: Verify the packaged bundle
         shell: bash
         run: |
-          set -o pipefail
+          set -e
           dmg=$(ls build/deskflow[-_]*.dmg | head -1)
-          mountpoint=$(hdiutil attach "$dmg" -nobrowse -readonly | tail -1 | awk '{print $3}')
+          test -n "$dmg"
+          hdiutil detach /Volumes/Deskflow -force >/dev/null 2>&1 || true
+          mountpoint=$(hdiutil attach "$dmg" -noverify -nobrowse -readonly | tail -1 | cut -f3)
+          echo "mounted at: $mountpoint"
+          test -d "$mountpoint/Deskflow.app"
           codesign --verify --deep --strict --verbose=2 "$mountpoint/Deskflow.app"
-          "$mountpoint/Deskflow.app/Contents/MacOS/Deskflow" --version || true
           hdiutil detach "$mountpoint" -force
 
       - name: Upload
@@ -154,9 +157,13 @@ jobs:
       - name: Verify the packaged bundle
         shell: bash
         run: |
-          set -o pipefail
+          set -e
           dmg=$(ls build/deskflow[-_]*.dmg | head -1)
-          mountpoint=$(hdiutil attach "$dmg" -nobrowse -readonly | tail -1 | awk '{print $3}')
+          test -n "$dmg"
+          hdiutil detach /Volumes/Deskflow -force >/dev/null 2>&1 || true
+          mountpoint=$(hdiutil attach "$dmg" -noverify -nobrowse -readonly | tail -1 | cut -f3)
+          echo "mounted at: $mountpoint"
+          test -d "$mountpoint/Deskflow.app"
           codesign --verify --deep --strict --verbose=2 "$mountpoint/Deskflow.app"
           hdiutil detach "$mountpoint" -force
 
