@@ -92,9 +92,19 @@ jobs:
             sleep 2
           done
           if [ "$package_ok" != true ]; then
-            echo "dmg packaging failed, archiving the app bundle instead" >&2
-            ditto -c -k --sequesterRsrc --keepParent build/deskflow-*.app deskflow-app.zip
+            echo "dmg packaging failed" >&2
+            exit 1
           fi
+
+      - name: Verify the packaged bundle
+        shell: bash
+        run: |
+          set -o pipefail
+          dmg=$(ls build/deskflow[-_]*.dmg | head -1)
+          mountpoint=$(hdiutil attach "$dmg" -nobrowse -readonly | tail -1 | awk '{print $3}')
+          codesign --verify --deep --strict --verbose=2 "$mountpoint/Deskflow.app"
+          "$mountpoint/Deskflow.app/Contents/MacOS/Deskflow" --version || true
+          hdiutil detach "$mountpoint" -force
 
       - name: Upload
         uses: actions/upload-artifact@v7
@@ -102,7 +112,6 @@ jobs:
           name: deskflow-macos-arm64
           path: |
             build/deskflow[-_]*.dmg
-            deskflow-app.zip
 
   macos-x64:
     runs-on: macos-15-intel
@@ -141,6 +150,15 @@ jobs:
             echo "dmg packaging failed, archiving the app bundle instead" >&2
             ditto -c -k --sequesterRsrc --keepParent build/deskflow-*.app deskflow-app.zip
           fi
+
+      - name: Verify the packaged bundle
+        shell: bash
+        run: |
+          set -o pipefail
+          dmg=$(ls build/deskflow[-_]*.dmg | head -1)
+          mountpoint=$(hdiutil attach "$dmg" -nobrowse -readonly | tail -1 | awk '{print $3}')
+          codesign --verify --deep --strict --verbose=2 "$mountpoint/Deskflow.app"
+          hdiutil detach "$mountpoint" -force
 
       - name: Upload
         uses: actions/upload-artifact@v7
