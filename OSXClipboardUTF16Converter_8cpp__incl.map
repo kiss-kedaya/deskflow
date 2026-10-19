@@ -1,0 +1,33 @@
+<map id="src/lib/platform/OSXClipboardUTF16Converter.cpp" name="src/lib/platform/OSXClipboardUTF16Converter.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="343,5,537,44"/>
+<area shape="rect" id="Node000002" href="$OSXClipboardUTF16Converter_8h.html" title=" " alt="" coords="277,92,470,131"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="427,43,400,81,396,78,423,47"/>
+<area shape="rect" id="Node000015" href="$Unicode_8h.html" title=" " alt="" coords="493,338,606,363"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="455,42,485,91,509,155,527,219,548,324,543,322,522,220,504,156,480,93,453,47"/>
+<area shape="rect" id="Node000003" href="$OSXClipboardAnyTextConverter_8h.html" title=" " alt="" coords="245,179,422,217"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="366,129,351,166,347,163,363,133"/>
+<area shape="rect" id="Node000004" href="$OSXClipboard_8h.html" title=" " alt="" coords="169,265,335,290"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="316,216,277,256,274,252,312,220"/>
+<area shape="rect" id="Node000005" href="$IClipboard_8h.html" title=" " alt="" coords="178,338,326,363"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="254,288,254,324,250,321,250,293"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="349,338,470,363"/>
+<area shape="poly" id="edge11_Node000004_Node000012" title=" " alt="" coords="278,288,372,331,367,332,278,293"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="5,338,75,363"/>
+<area shape="poly" id="edge12_Node000004_Node000013" title=" " alt="" coords="216,293,90,335,88,330,218,288"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="98,338,155,363"/>
+<area shape="poly" id="edge13_Node000004_Node000014" title=" " alt="" coords="229,292,162,332,159,328,234,289"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="431,411,492,435"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="287,361,419,406,414,407,286,366"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="33,411,111,435"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="225,364,117,407,115,402,220,362"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="135,411,196,435"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="240,362,192,403,190,399,235,364"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="220,411,286,435"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="254,361,255,397,251,394,250,365"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="520,411,573,435"/>
+<area shape="poly" id="edge9_Node000005_Node000010" title=" " alt="" coords="304,361,505,408,508,411,502,411,503,413,303,366"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="310,411,399,435"/>
+<area shape="poly" id="edge10_Node000005_Node000011" title=" " alt="" coords="270,361,328,402,323,402,268,366"/>
+<area shape="poly" id="edge15_Node000015_Node000006" title=" " alt="" coords="537,362,489,403,486,398,532,364"/>
+<area shape="poly" id="edge16_Node000015_Node000010" title=" " alt="" coords="551,361,550,397,546,393,547,365"/>
+</map>

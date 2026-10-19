@@ -1,0 +1,23 @@
+<map id="src/lib/platform/MSWindowsClipboard.h" name="src/lib/platform/MSWindowsClipboard.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="340,5,526,44"/>
+<area shape="rect" id="Node000002" href="$IClipboard_8h.html" title=" " alt="" coords="192,92,340,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="395,44,306,88,304,83,390,46"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="364,92,422,117"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="425,43,408,80,404,76,421,46"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="446,92,502,117"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="444,42,463,79,458,77,442,47"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="527,92,613,117"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="467,42,539,84,534,84,466,47"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,165,66,189"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="229,120,81,165,80,159,227,115"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="90,165,168,189"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="246,117,166,160,164,155,241,118"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="192,165,253,189"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="261,116,239,153,236,149,257,119"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="277,165,343,189"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="275,115,297,152,292,151,272,120"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="368,165,421,189"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="288,115,362,157,357,157,287,120"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="446,165,535,189"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="304,115,441,159,436,160,303,120"/>
+</map>

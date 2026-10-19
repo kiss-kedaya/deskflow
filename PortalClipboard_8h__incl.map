@@ -1,0 +1,21 @@
+<map id="src/lib/platform/PortalClipboard.h" name="src/lib/platform/PortalClipboard.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="314,5,526,30"/>
+<area shape="rect" id="Node000002" href="$IClipboard_8h.html" title=" " alt="" coords="210,78,358,103"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="400,30,321,73,319,68,395,32"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="355,151,421,175"/>
+<area shape="poly" id="edge8_Node000001_Node000006" title=" " alt="" coords="420,29,396,137,392,134,415,32"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="445,151,534,175"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="427,28,480,137,475,136,424,32"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="482,78,598,103"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="440,28,510,70,504,70,439,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="168,151,229,175"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="272,102,225,143,223,138,267,104"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="253,151,331,175"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="287,101,291,137,287,134,284,105"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,151,67,175"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="244,106,83,151,81,146,242,101"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="302,101,361,142,356,141,300,106"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="91,151,144,175"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="259,103,159,147,157,142,254,104"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="318,101,444,145,438,146,317,106"/>
+</map>
