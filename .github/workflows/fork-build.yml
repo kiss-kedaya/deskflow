@@ -102,12 +102,12 @@ jobs:
           set -e
           dmg=$(ls build/deskflow[-_]*.dmg | head -1)
           test -n "$dmg"
-          hdiutil detach /Volumes/Deskflow -force >/dev/null 2>&1 || true
-          mountpoint=$(hdiutil attach "$dmg" -noverify -nobrowse -readonly | tail -1 | cut -f3)
-          echo "mounted at: $mountpoint"
-          test -d "$mountpoint/Deskflow.app"
-          codesign --verify --deep --strict --verbose=2 "$mountpoint/Deskflow.app"
-          hdiutil detach "$mountpoint" -force
+          ls -la "$dmg"
+          find build -maxdepth 2 -name 'Deskflow.app' -type d
+          app=$(find build -maxdepth 2 -name 'Deskflow.app' -type d | head -1)
+          test -n "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          otool -L "$app/Contents/MacOS/Deskflow" | head -20
 
       - name: Upload
         uses: actions/upload-artifact@v7
@@ -160,12 +160,11 @@ jobs:
           set -e
           dmg=$(ls build/deskflow[-_]*.dmg | head -1)
           test -n "$dmg"
-          hdiutil detach /Volumes/Deskflow -force >/dev/null 2>&1 || true
-          mountpoint=$(hdiutil attach "$dmg" -noverify -nobrowse -readonly | tail -1 | cut -f3)
-          echo "mounted at: $mountpoint"
-          test -d "$mountpoint/Deskflow.app"
-          codesign --verify --deep --strict --verbose=2 "$mountpoint/Deskflow.app"
-          hdiutil detach "$mountpoint" -force
+          ls -la "$dmg"
+          app=$(find build -maxdepth 2 -name 'Deskflow.app' -type d | head -1)
+          test -n "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          otool -L "$app/Contents/MacOS/Deskflow" | head -20
 
       - name: Upload
         uses: actions/upload-artifact@v7
