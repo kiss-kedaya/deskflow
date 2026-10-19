@@ -10,6 +10,7 @@
 #include "common/ExitCodes.h"
 #include "common/I18N.h"
 #include "common/PlatformInfo.h"
+#include "common/Settings.h"
 #include "common/UrlConstants.h"
 #include "common/VersionInfo.h"
 #include "gui/Diagnostic.h"
@@ -140,7 +141,13 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  if (!checkMacAssistiveDevices()) {
+  // Only a server needs the accessibility API (to inject input into other
+  // apps). A client never does, and refusing to start it just because the
+  // toggle is off makes the app look broken. Ask for trust when running as a
+  // server, and let the client through either way; the core is the thing that
+  // actually needs the permission and it reports a clear failure if it lacks it.
+  const auto coreMode = Settings::value(Settings::Core::CoreMode).value<Settings::CoreMode>();
+  if (coreMode == Settings::CoreMode::Server && !checkMacAssistiveDevices()) {
     return 1;
   }
 #endif
